@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PulseChat Connection Tester</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        p {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .test-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .test-section h2 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status.pending {
+            background: #ffeaa7;
+            color: #d63031;
+        }
+
+        .status.success {
+            background: #55efc4;
+            color: #00b894;
+        }
+
+        .status.error {
+            background: #ff7675;
+            color: #d63031;
+        }
+
+        .result {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 PulseChat Connection Tester</h1>
+        <p>Test your frontend-backend connection</p>
+
+        <div class="input-group">
+            <label for="apiUrl">Backend API URL:</label>
+            <input type="text" id="apiUrl" value="https://messenger-ccfz.onrender.com" placeholder="https://your-backend.onrender.com">
+        </div>
+
+        <div class="test-section">
+            <h2>
+                <span id="healthIcon">⏳</span>
+                Health Check
+                <span id="healthStatus" class="status pending">Pending</span>
+            </h2>
+            <div id="healthResult" class="result">Click "Run Tests" to check backend health...</div>
+        </div>
+
+        <div class="test-section">
+            <h2>
+                <span id="corsIcon">⏳</span>
+                CORS Test
+                <span id="corsStatus" class="status pending">Pending</span>
+            </h2>
+            <div id="corsResult" class="result">Click "Run Tests" to test CORS configuration...</div>
+        </div>
+
+        <div class="test-section">
+            <h2>
+                <span id="registerIcon">⏳</span>
+                Registration Test
+                <span id="registerStatus" class="status pending">Pending</span>
+            </h2>
+            <div id="registerResult" class="result">Click "Run Tests" to test registration endpoint...</div>
+        </div>
+
+        <button id="runTests" onclick="runAllTests()">Run Tests</button>
+    </div>
+
+    <script>
+        async function runAllTests() {
+            const apiUrl = document.getElementById('apiUrl').value.trim();
+            const button = document.getElementById('runTests');
+            
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner"></span> Running Tests...';
+
+            // Test 1: Health Check
+            await testHealth(apiUrl);
+            
+            // Test 2: CORS
+            await testCORS(apiUrl);
+            
+            // Test 3: Registration
+            await testRegistration(apiUrl);
+
+            button.disabled = false;
+            button.innerHTML = 'Run Tests Again';
+        }
+
+        async function testHealth(apiUrl) {
+            const resultDiv = document.getElementById('healthResult');
+            const statusSpan = document.getElementById('healthStatus');
+            const icon = document.getElementById('healthIcon');
+
+            resultDiv.textContent = 'Testing...';
+            icon.textContent = '⏳';
+
+            try {
+                const response = await fetch(`${apiUrl}/health`);
+                const data = await response.json();
+                
+                if (response.ok && data.status === 'ok') {
+                    statusSpan.className = 'status success';
+                    statusSpan.textContent = 'Success';
+                    icon.textContent = '✅';
+                    resultDiv.textContent = `✅ Backend is running!\n\nResponse:\n${JSON.stringify(data, null, 2)}`;
+                } else {
+                    throw new Error('Health check failed');
+                }
+            } catch (error) {
+                statusSpan.className = 'status error';
+                statusSpan.textContent = 'Failed';
+                icon.textContent = '❌';
+                resultDiv.textContent = `❌ Health check failed!\n\nError: ${error.message}\n\nPossible causes:\n- Backend is not running\n- Wrong URL\n- Network issues`;
+            }
+        }
+
+        async function testCORS(apiUrl) {
+            const resultDiv = document.getElementById('corsResult');
+            const statusSpan = document.getElementById('corsStatus');
+            const icon = document.getElementById('corsIcon');
+
+            resultDiv.textContent = 'Testing...';
+            icon.textContent = '⏳';
+
+            try {
+                const response = await fetch(`${apiUrl}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'test@test.com',
+                        password: 'test123'
+                    })
+                });
+
+                // If we get here without CORS error, CORS is working
+                const corsHeaders = {
+                    'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),
+                    'Access-Control-Allow-Credentials': response.headers.get('Access-Control-Allow-Credentials')
+                };
+
+                statusSpan.className = 'status success';
+                statusSpan.textContent = 'Success';
+                icon.textContent = '✅';
+                resultDiv.textContent = `✅ CORS is configured correctly!\n\nCORS Headers:\n${JSON.stringify(corsHeaders, null, 2)}\n\nNote: Login failed (expected), but CORS works!`;
+            } catch (error) {
+                if (error.message.includes('CORS')) {
+                    statusSpan.className = 'status error';
+                    statusSpan.textContent = 'Failed';
+                    icon.textContent = '❌';
+                    resultDiv.textContent = `❌ CORS Error!\n\nError: ${error.message}\n\nFix:\n1. Set CLIENT_URL in Render to: ${window.location.origin}\n2. Redeploy backend\n3. Test again`;
+                } else {
+                    statusSpan.className = 'status success';
+                    statusSpan.textContent = 'Success';
+                    icon.textContent = '✅';
+                    resultDiv.textContent = `✅ CORS works!\n\nError was: ${error.message}\n(This is expected - we used fake credentials)`;
+                }
+            }
+        }
+
+        async function testRegistration(apiUrl) {
+            const resultDiv = document.getElementById('registerResult');
+            const statusSpan = document.getElementById('registerStatus');
+            const icon = document.getElementById('registerIcon');
+
+            resultDiv.textContent = 'Testing...';
+            icon.textContent = '⏳';
+
+            const testUser = {
+                username: `test_${Date.now()}`,
+                email: `test_${Date.now()}@example.com`,
+                password: 'TestPassword123!'
+            };
+
+            try {
+                const response = await fetch(`${apiUrl}/api/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testUser)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    statusSpan.className = 'status success';
+                    statusSpan.textContent = 'Success';
+                    icon.textContent = '✅';
+                    resultDiv.textContent = `✅ Registration works!\n\nTest user created:\n${JSON.stringify({ username: testUser.username, email: testUser.email }, null, 2)}\n\nYour app should work now!`;
+                } else {
+                    statusSpan.className = 'status error';
+                    statusSpan.textContent = 'Failed';
+                    icon.textContent = '❌';
+                    resultDiv.textContent = `❌ Registration failed!\n\nStatus: ${response.status}\nError: ${data.error || data.message || 'Unknown error'}\n\nResponse:\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                statusSpan.className = 'status error';
+                statusSpan.textContent = 'Failed';
+                icon.textContent = '❌';
+                resultDiv.textContent = `❌ Registration test failed!\n\nError: ${error.message}\n\nThis is the same error you're seeing!\n\nFix:\n1. Check CORS configuration\n2. Verify backend is running\n3. Check network tab in browser DevTools`;
+            }
+        }
+    </script>
+</body>
+</html>
