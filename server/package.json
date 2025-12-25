@@ -1,0 +1,19 @@
+{
+    "name": "pulsechat-server",
+    "version": "1.0.0",
+    "description": "PulseChat backend server with Express, Socket.io, and MongoDB",
+    "main": "index.ts",
+    "scripts": {
+        "dev": "nodemon --exec tsx index.ts",
+        "start": "tsx index.ts",
+        "build": "tsc"
+    },
+    "keywords": [
+        "chat",
+        "messenger",
+        "socket.io",
+        "express"
+    ],
+    "author": "",
+    "license": "MIT"
+}
