@@ -59,6 +59,10 @@ interface ChatState {
     addMessage: (message: Message) => void;
     updateMessage: (messageId: string, updates: Partial<Message>) => void;
     setTyping: (conversationId: string, userId: string, isTyping: boolean) => void;
+    fetchConversations: () => Promise<void>;
+    createDirectConversation: (participantId: string) => Promise<Conversation | null>;
+    loadMessages: (conversationId: string) => Promise<void>;
+    setConversations: (conversations: Conversation[]) => void;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
@@ -209,5 +213,85 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
             return { typingUsers };
         });
+    },
+
+    fetchConversations: async () => {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            const response = await fetch(`${API_URL}/api/messages/conversations`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                set({ conversations: data.conversations || [] });
+            }
+        } catch (error) {
+            console.error('Fetch conversations error:', error);
+        }
+    },
+
+    createDirectConversation: async (participantId: string) => {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) return null;
+
+            const response = await fetch(`${API_URL}/api/messages/conversations/direct`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({ participantId }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const conversation = data.conversation;
+
+                // Add to conversations if not already there
+                set((state) => {
+                    const exists = state.conversations.find(c => c._id === conversation._id);
+                    if (!exists) {
+                        return { conversations: [conversation, ...state.conversations] };
+                    }
+                    return state;
+                });
+
+                return conversation;
+            }
+            return null;
+        } catch (error) {
+            console.error('Create conversation error:', error);
+            return null;
+        }
+    },
+
+    loadMessages: async (conversationId: string) => {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            const response = await fetch(`${API_URL}/api/messages/conversations/${conversationId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                set({ messages: data.messages || [] });
+            }
+        } catch (error) {
+            console.error('Load messages error:', error);
+        }
+    },
+
+    setConversations: (conversations: Conversation[]) => {
+        set({ conversations });
     },
 }));

@@ -5,12 +5,26 @@ import { useAuthStore, useChatStore } from '@/lib/store';
 import { Search, Plus, Settings, LogOut, MessageCircle, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn, formatMessageTime, getInitials, generateAvatarColor } from '@/lib/utils';
+import UserSearchModal from './UserSearchModal';
 
 export default function Sidebar() {
     const { user, logout } = useAuthStore();
-    const { conversations, setCurrentConversation, currentConversation } = useChatStore();
+    const { conversations, setCurrentConversation, currentConversation, fetchConversations, createDirectConversation, loadMessages } = useChatStore();
     const [searchQuery, setSearchQuery] = useState('');
     const [showSettings, setShowSettings] = useState(false);
+    const [showUserSearch, setShowUserSearch] = useState(false);
+
+    useEffect(() => {
+        fetchConversations();
+    }, []);
+
+    const handleSelectUser = async (userId: string) => {
+        const conversation = await createDirectConversation(userId);
+        if (conversation) {
+            setCurrentConversation(conversation);
+            await loadMessages(conversation._id);
+        }
+    };
 
     const filteredConversations = conversations.filter((conv) => {
         if (!searchQuery) return true;
@@ -183,11 +197,21 @@ export default function Sidebar() {
 
             {/* New Chat Button */}
             <div className="p-4 border-t border-border">
-                <button className="w-full bg-gradient-to-r from-primary to-secondary text-white font-semibold py-3 rounded-lg hover:shadow-lg hover:shadow-primary/50 transition-all flex items-center justify-center gap-2">
+                <button
+                    onClick={() => setShowUserSearch(true)}
+                    className="w-full bg-gradient-to-r from-primary to-secondary text-white font-semibold py-3 rounded-lg hover:shadow-lg hover:shadow-primary/50 transition-all flex items-center justify-center gap-2"
+                >
                     <Plus className="w-5 h-5" />
                     New Chat
                 </button>
             </div>
+
+            {/* User Search Modal */}
+            <UserSearchModal
+                isOpen={showUserSearch}
+                onClose={() => setShowUserSearch(false)}
+                onSelectUser={handleSelectUser}
+            />
         </div>
     );
 }

@@ -9,12 +9,19 @@ import EmojiPicker from 'emoji-picker-react';
 
 export default function ChatWindow() {
     const { user, socket } = useAuthStore();
-    const { currentConversation, messages, addMessage, typingUsers } = useChatStore();
+    const { currentConversation, messages, addMessage, typingUsers, loadMessages } = useChatStore();
     const [messageInput, setMessageInput] = useState('');
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [isTyping, setIsTyping] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Load messages when conversation changes
+    useEffect(() => {
+        if (currentConversation) {
+            loadMessages(currentConversation._id);
+        }
+    }, [currentConversation?._id]);
 
     useEffect(() => {
         if (socket && currentConversation) {
