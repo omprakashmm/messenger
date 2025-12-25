@@ -1,12 +1,15 @@
 # Render Deployment Configuration
+# Place this file in the SERVER directory, not root
+
 services:
   - type: web
     name: pulsechat-backend
     env: node
     region: oregon
     plan: free
-    buildCommand: cd server && npm install && npm run build
-    startCommand: cd server && npm start
+    rootDir: server
+    buildCommand: npm install && npm run build
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production

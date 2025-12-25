@@ -5,8 +5,9 @@
     "main": "index.ts",
     "scripts": {
         "dev": "nodemon --exec tsx index.ts",
-        "start": "tsx index.ts",
-        "build": "tsc"
+        "start": "node dist/index.js",
+        "build": "tsc",
+        "postinstall": "npm run build"
     },
     "keywords": [
         "chat",
@@ -15,5 +16,31 @@
         "express"
     ],
     "author": "",
-    "license": "MIT"
+    "license": "MIT",
+    "dependencies": {
+        "express": "^5.2.1",
+        "socket.io": "^4.8.1",
+        "mongoose": "^9.0.2",
+        "cors": "^2.8.5",
+        "helmet": "^8.1.0",
+        "dotenv": "^17.2.3",
+        "express-rate-limit": "^8.2.1",
+        "jsonwebtoken": "^9.0.3",
+        "bcryptjs": "^3.0.3",
+        "ioredis": "^5.8.2",
+        "redis": "^5.10.0",
+        "cloudinary": "^2.8.0",
+        "multer": "^2.0.2"
+    },
+    "devDependencies": {
+        "@types/express": "^5.0.6",
+        "@types/node": "^20",
+        "@types/cors": "^2.8.19",
+        "@types/jsonwebtoken": "^9.0.10",
+        "@types/bcryptjs": "^2.4.6",
+        "@types/multer": "^2.0.0",
+        "typescript": "^5",
+        "tsx": "^4.21.0",
+        "nodemon": "^3.1.11"
+    }
 }
