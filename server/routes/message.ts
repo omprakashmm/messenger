@@ -2,8 +2,78 @@ import { Router, Response } from 'express';
 import Message from '../models/Message';
 import Conversation from '../models/Conversation';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
+import multer from 'multer';
+import { v2 as cloudinary } from 'cloudinary';
+
+// Configure multer for memory storage
+const storage = multer.memoryStorage();
+const upload = multer({
+    storage,
+    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
+    fileFilter: (req, file, cb) => {
+        // Allow images, videos, and documents
+        const allowedTypes = /jpeg|jpg|png|gif|webp|mp4|mov|avi|pdf|doc|docx|txt/;
+        const extname = allowedTypes.test(file.originalname.toLowerCase());
+        const mimetype = allowedTypes.test(file.mimetype);
+
+        if (mimetype && extname) {
+            return cb(null, true);
+        } else {
+            cb(new Error('Invalid file type'));
+        }
+    },
+});
+
+// Configure Cloudinary (if credentials are available)
+if (process.env.CLOUDINARY_CLOUD_NAME) {
+    cloudinary.config({
+        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+        api_key: process.env.CLOUDINARY_API_KEY,
+        api_secret: process.env.CLOUDINARY_API_SECRET,
+    });
+}
 
 const router = Router();
+
+// Upload file endpoint
+router.post('/upload', authenticateToken, upload.single('file'), async (req: AuthRequest, res: Response) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        const file = req.file;
+
+        // Convert buffer to base64
+        const b64 = Buffer.from(file.buffer).toString('base64');
+        const dataURI = `data:${file.mimetype};base64,${b64}`;
+
+        // Upload to Cloudinary
+        const result = await cloudinary.uploader.upload(dataURI, {
+            folder: 'messenger',
+            resource_type: 'auto',
+        });
+
+        // Determine message type
+        let type = 'file';
+        if (file.mimetype.startsWith('image')) {
+            type = 'image';
+        } else if (file.mimetype.startsWith('video')) {
+            type = 'video';
+        } else if (file.mimetype.startsWith('audio')) {
+            type = 'audio';
+        }
+
+        res.json({
+            url: result.secure_url,
+            type: type,
+        });
+    } catch (error: any) {
+        console.error('File upload error:', error);
+        res.status(500).json({ error: 'Upload failed' });
+    }
+});
+
 
 // Get conversations
 router.get('/conversations', authenticateToken, async (req: AuthRequest, res: Response) => {

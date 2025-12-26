@@ -15,8 +15,10 @@ export default function ChatWindow() {
     const [messageInput, setMessageInput] = useState('');
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [isTyping, setIsTyping] = useState(false);
+    const [uploading, setUploading] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Load messages when conversation changes
     useEffect(() => {
@@ -133,6 +135,46 @@ export default function ChatWindow() {
         setMessageInput((prev) => prev + emojiData.emoji);
     };
 
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !socket || !currentConversation) return;
+
+        setUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const token = localStorage.getItem('token');
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+            const response = await fetch(`${API_URL}/api/messages/upload`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: formData,
+            });
+
+            if (response.ok) {
+                const { url, type } = await response.json();
+
+                // Send message with media
+                socket.emit('message:send', {
+                    conversationId: currentConversation._id,
+                    content: url,
+                    type: type,
+                });
+            }
+        } catch (error) {
+            console.error('File upload error:', error);
+        } finally {
+            setUploading(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
+    };
+
     if (!currentConversation) return null;
 
     // Find the other user - check all possible ID combinations
@@ -245,7 +287,41 @@ export default function ChatWindow() {
                                             {message.sender.username}
                                         </p>
                                     )}
-                                    <p className="text-sm leading-relaxed">{message.content}</p>
+
+                                    {/* Render based on message type */}
+                                    {message.type === 'image' ? (
+                                        <img
+                                            src={message.content}
+                                            alt="Shared image"
+                                            className="max-w-sm rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                                            onClick={() => window.open(message.content, '_blank')}
+                                        />
+                                    ) : message.type === 'video' ? (
+                                        <video
+                                            src={message.content}
+                                            controls
+                                            className="max-w-sm rounded-lg"
+                                        />
+                                    ) : message.type === 'audio' ? (
+                                        <audio
+                                            src={message.content}
+                                            controls
+                                            className="max-w-sm"
+                                        />
+                                    ) : message.type === 'file' ? (
+                                        <a
+                                            href={message.content}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-2 text-primary hover:underline"
+                                        >
+                                            <Paperclip className="w-4 h-4" />
+                                            <span>Download File</span>
+                                        </a>
+                                    ) : (
+                                        <p className="text-sm leading-relaxed">{message.content}</p>
+                                    )}
+
                                     <div className="flex items-center justify-end gap-2 mt-1">
                                         <span className="text-xs opacity-70">
                                             {formatMessageTime(message.createdAt)}
@@ -292,11 +368,25 @@ export default function ChatWindow() {
                             >
                                 <Smile className="w-5 h-5 text-text-secondary" />
                             </button>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                onChange={handleFileUpload}
+                                className="hidden"
+                            />
                             <button
                                 type="button"
-                                className="p-2 hover:bg-surface-hover rounded-lg transition-colors"
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={uploading}
+                                className="p-2 hover:bg-surface-hover rounded-lg transition-colors disabled:opacity-50"
+                                title="Attach file"
                             >
-                                <Paperclip className="w-5 h-5 text-text-secondary" />
+                                {uploading ? (
+                                    <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                    <Paperclip className="w-5 h-5 text-text-secondary" />
+                                )}
                             </button>
                         </div>
 
