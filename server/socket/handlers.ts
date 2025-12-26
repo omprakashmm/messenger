@@ -62,7 +62,11 @@ export const handleSocketConnection = (io: Server, socket: Socket) => {
             });
 
             // Emit to conversation room
-            io.to(`conversation:${conversationId}`).emit('message:new', message);
+            const messageWithTempId = {
+                ...message.toObject(),
+                tempId: data.tempId,
+            };
+            io.to(`conversation:${conversationId}`).emit('message:new', messageWithTempId);
 
             // Send delivery confirmation to sender
             socket.emit('message:sent', { tempId: data.tempId, message });
