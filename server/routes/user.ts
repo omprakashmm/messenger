@@ -1,6 +1,32 @@
 import { Router, Response } from 'express';
 import User from '../models/User';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
+import multer from 'multer';
+import { v2 as cloudinary } from 'cloudinary';
+
+// Configure multer for memory storage
+const storage = multer.memoryStorage();
+const upload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only image files are allowed'));
+        }
+    },
+});
+
+// Configure Cloudinary (if credentials are available)
+if (process.env.CLOUDINARY_CLOUD_NAME) {
+    cloudinary.config({
+        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+        api_key: process.env.CLOUDINARY_API_KEY,
+        api_secret: process.env.CLOUDINARY_API_SECRET,
+    });
+}
+
 
 const router = Router();
 
@@ -45,15 +71,59 @@ router.get('/:userId', authenticateToken, async (req: AuthRequest, res: Response
     }
 });
 
+// Upload avatar
+router.post('/avatar', authenticateToken, upload.single('avatar'), async (req: AuthRequest, res: Response) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        let avatarUrl = '';
+
+        // Try Cloudinary first
+        if (process.env.CLOUDINARY_CLOUD_NAME) {
+            const result = await new Promise((resolve, reject) => {
+                const uploadStream = cloudinary.uploader.upload_stream(
+                    {
+                        folder: 'messenger/avatars',
+                        transformation: [
+                            { width: 400, height: 400, crop: 'fill', gravity: 'face' },
+                            { quality: 'auto:good' },
+                        ],
+                    },
+                    (error, result) => {
+                        if (error) reject(error);
+                        else resolve(result);
+                    }
+                );
+                uploadStream.end(req.file!.buffer);
+            });
+            avatarUrl = (result as any).secure_url;
+        } else {
+            // Fallback to base64 (not recommended for production)
+            avatarUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+        }
+
+        // Update user avatar
+        await User.findByIdAndUpdate(req.userId, { avatar: avatarUrl });
+
+        res.json({ avatarUrl });
+    } catch (error: any) {
+        console.error('Avatar upload error:', error);
+        res.status(500).json({ error: 'Failed to upload avatar' });
+    }
+});
+
 // Update user profile
 router.patch('/profile', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-        const { username, bio, avatar } = req.body;
+        const { username, bio, avatar, phone } = req.body;
         const updates: any = {};
 
         if (username) updates.username = username;
         if (bio !== undefined) updates.bio = bio;
         if (avatar !== undefined) updates.avatar = avatar;
+        if (phone !== undefined) updates.phone = phone;
 
         const user = await User.findByIdAndUpdate(
             req.userId,

@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useAuthStore, useChatStore } from '@/lib/store';
-import { Search, Plus, Settings, LogOut, MessageCircle, Users } from 'lucide-react';
+import { Search, Plus, Settings, LogOut, MessageCircle, Users, UserCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn, formatMessageTime, getInitials, generateAvatarColor } from '@/lib/utils';
 import UserSearchModal from './UserSearchModal';
+import ProfilePage from '../profile/ProfilePage';
 
 export default function Sidebar() {
     const { user, logout } = useAuthStore();
@@ -13,6 +14,7 @@ export default function Sidebar() {
     const [searchQuery, setSearchQuery] = useState('');
     const [showSettings, setShowSettings] = useState(false);
     const [showUserSearch, setShowUserSearch] = useState(false);
+    const [showProfile, setShowProfile] = useState(false);
 
     useEffect(() => {
         fetchConversations();
@@ -37,19 +39,19 @@ export default function Sidebar() {
 
     const getConversationName = (conv: any) => {
         if (conv.type === 'group') return conv.name;
-        const otherUser = conv.participants.find((p: any) => p.id !== user?.id);
+        const otherUser = conv.participants.find((p: any) => p._id !== user?.id);
         return otherUser?.username || 'Unknown';
     };
 
     const getConversationAvatar = (conv: any) => {
         if (conv.type === 'group') return conv.avatar;
-        const otherUser = conv.participants.find((p: any) => p.id !== user?.id);
+        const otherUser = conv.participants.find((p: any) => p._id !== user?.id);
         return otherUser?.avatar;
     };
 
     const getConversationStatus = (conv: any) => {
         if (conv.type === 'group') return null;
-        const otherUser = conv.participants.find((p: any) => p.id !== user?.id);
+        const otherUser = conv.participants.find((p: any) => p._id !== user?.id);
         return otherUser?.status;
     };
 
@@ -58,7 +60,10 @@ export default function Sidebar() {
             {/* Header */}
             <div className="p-4 border-b border-border">
                 <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => setShowProfile(true)}
+                        className="flex items-center gap-3 hover:bg-surface-hover rounded-lg p-2 -m-2 transition-colors"
+                    >
                         <div className="relative">
                             {user?.avatar ? (
                                 <img
@@ -80,7 +85,7 @@ export default function Sidebar() {
                             <h2 className="font-semibold text-text-primary">{user?.username}</h2>
                             <p className="text-xs text-text-muted">Online</p>
                         </div>
-                    </div>
+                    </button>
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => setShowSettings(!showSettings)}
@@ -212,6 +217,11 @@ export default function Sidebar() {
                 onClose={() => setShowUserSearch(false)}
                 onSelectUser={handleSelectUser}
             />
+
+            {/* Profile Page Modal */}
+            {showProfile && (
+                <ProfilePage onClose={() => setShowProfile(false)} />
+            )}
         </div>
     );
 }

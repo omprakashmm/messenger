@@ -1,9 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/lib/store';
 import { motion } from 'framer-motion';
 import { MessageCircle, Lock, Mail, User, Eye, EyeOff } from 'lucide-react';
+
+interface Particle {
+    left: string;
+    top: string;
+    animationDelay: string;
+    animationDuration: string;
+}
 
 export default function AuthPage() {
     const [isLogin, setIsLogin] = useState(true);
@@ -13,6 +20,18 @@ export default function AuthPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [particles, setParticles] = useState<Particle[]>([]);
+
+    // Generate particles on client-side only to avoid hydration mismatch
+    useEffect(() => {
+        const generatedParticles = Array.from({ length: 20 }, () => ({
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}%`,
+            animationDelay: `${Math.random() * 5}s`,
+            animationDuration: `${5 + Math.random() * 10}s`,
+        }));
+        setParticles(generatedParticles);
+    }, []);
 
     const { login, register } = useAuthStore();
 
@@ -40,11 +59,30 @@ export default function AuthPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#16213e] p-4">
-            {/* Background Effects */}
+        <div className="min-h-screen flex items-center justify-center bg-black relative overflow-hidden p-4">
+            {/* Animated Background */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-pulse" />
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+                {/* Gradient Orbs */}
+                <div className="absolute top-0 left-0 w-[600px] h-[600px] bg-gradient-to-br from-purple-600/30 via-blue-600/20 to-transparent rounded-full blur-3xl animate-pulse" />
+                <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-gradient-to-tl from-blue-600/30 via-purple-600/20 to-transparent rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-gradient-to-r from-indigo-600/20 to-pink-600/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+
+                {/* Animated Grid */}
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:50px_50px] [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_80%)]" />
+
+                {/* Floating Particles */}
+                {particles.map((particle, i) => (
+                    <div
+                        key={i}
+                        className="absolute w-1 h-1 bg-white/30 rounded-full animate-float"
+                        style={{
+                            left: particle.left,
+                            top: particle.top,
+                            animationDelay: particle.animationDelay,
+                            animationDuration: particle.animationDuration,
+                        }}
+                    />
+                ))}
             </div>
 
             <motion.div
@@ -63,7 +101,7 @@ export default function AuthPage() {
                     >
                         <MessageCircle className="w-10 h-10 text-white" />
                     </motion.div>
-                    <h1 className="text-4xl font-bold gradient-text mb-2">PulseChat</h1>
+                    <h1 className="text-4xl font-bold gradient-text mb-2">Messenger</h1>
                     <p className="text-text-secondary">Connect instantly, chat securely</p>
                 </div>
 
@@ -74,8 +112,8 @@ export default function AuthPage() {
                         <button
                             onClick={() => setIsLogin(true)}
                             className={`flex-1 py-2 px-4 rounded-md font-medium transition-all ${isLogin
-                                    ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg'
-                                    : 'text-text-secondary hover:text-text-primary'
+                                ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg'
+                                : 'text-text-secondary hover:text-text-primary'
                                 }`}
                         >
                             Login
@@ -83,8 +121,8 @@ export default function AuthPage() {
                         <button
                             onClick={() => setIsLogin(false)}
                             className={`flex-1 py-2 px-4 rounded-md font-medium transition-all ${!isLogin
-                                    ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg'
-                                    : 'text-text-secondary hover:text-text-primary'
+                                ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg'
+                                : 'text-text-secondary hover:text-text-primary'
                                 }`}
                         >
                             Register

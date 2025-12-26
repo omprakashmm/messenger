@@ -60,7 +60,7 @@ export default function ChatPage() {
                             </svg>
                         </div>
                         <h2 className="text-2xl font-bold text-text-primary mb-2">
-                            Welcome to PulseChat, {user?.username}!
+                            Welcome to Messenger, {user?.username}!
                         </h2>
                         <p className="text-text-secondary">
                             Select a conversation to start messaging

@@ -31,6 +31,11 @@ router.post('/conversations/direct', authenticateToken, async (req: AuthRequest,
             return res.status(400).json({ error: 'Participant ID required' });
         }
 
+        // Prevent self-conversation
+        if (participantId === req.userId) {
+            return res.status(400).json({ error: 'Cannot create conversation with yourself' });
+        }
+
         // Check if conversation already exists
         let conversation = await Conversation.findOne({
             type: 'direct',

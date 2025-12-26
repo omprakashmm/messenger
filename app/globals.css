@@ -84,9 +84,37 @@ body {
   animation: fadeIn 200ms;
 }
 
+
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 0.3;
+  }
+
+  50% {
+    transform: translateY(-100vh) translateX(50px);
+    opacity: 0.5;
+  }
+
+  90% {
+    opacity: 0.3;
+  }
+}
+
+.animate-float {
+  animation: float 10s linear infinite;
+}
+
 
 /* Glassmorphism */
 .glass {
