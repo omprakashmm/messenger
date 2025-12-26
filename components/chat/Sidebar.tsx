@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn, formatMessageTime, getInitials, generateAvatarColor } from '@/lib/utils';
 import UserSearchModal from './UserSearchModal';
 import ProfilePage from '../profile/ProfilePage';
+import SettingsPage from '../settings/SettingsPage';
 
 export default function Sidebar() {
     const { user, logout } = useAuthStore();
@@ -29,6 +30,10 @@ export default function Sidebar() {
     };
 
     const filteredConversations = conversations.filter((conv) => {
+        // Show only conversations with messages (contacts)
+        if (!conv.lastMessage) return false;
+
+        // Filter by search query
         if (!searchQuery) return true;
         const searchLower = searchQuery.toLowerCase();
         return (
@@ -221,6 +226,11 @@ export default function Sidebar() {
             {/* Profile Page Modal */}
             {showProfile && (
                 <ProfilePage onClose={() => setShowProfile(false)} />
+            )}
+
+            {/* Settings Page Modal */}
+            {showSettings && (
+                <SettingsPage onClose={() => setShowSettings(false)} />
             )}
         </div>
     );

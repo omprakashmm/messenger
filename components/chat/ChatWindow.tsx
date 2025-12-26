@@ -6,10 +6,12 @@ import { Send, Smile, Paperclip, MoreVertical, Phone, Video, Info } from 'lucide
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn, formatMessageTime, getInitials, generateAvatarColor } from '@/lib/utils';
 import EmojiPicker from 'emoji-picker-react';
+import { useNotificationStore } from '@/components/notifications/NotificationContainer';
 
 export default function ChatWindow() {
     const { user, socket } = useAuthStore();
     const { currentConversation, messages, addMessage, typingUsers, loadMessages } = useChatStore();
+    const { addNotification } = useNotificationStore();
     const [messageInput, setMessageInput] = useState('');
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [isTyping, setIsTyping] = useState(false);
@@ -31,6 +33,15 @@ export default function ChatWindow() {
             socket.on('message:new', (message) => {
                 if (message.conversationId === currentConversation._id) {
                     addMessage(message);
+
+                    // Show notification if not from me
+                    if (message.sender._id !== user?.id) {
+                        addNotification({
+                            title: message.sender.username,
+                            message: message.content,
+                            avatar: message.sender.avatar,
+                        });
+                    }
                 }
             });
 
