@@ -43,16 +43,32 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
         }
 
         const file = req.file;
+        let url = '';
 
-        // Convert buffer to base64
-        const b64 = Buffer.from(file.buffer).toString('base64');
-        const dataURI = `data:${file.mimetype};base64,${b64}`;
+        // Try Cloudinary if configured
+        if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY) {
+            try {
+                // Convert buffer to base64
+                const b64 = Buffer.from(file.buffer).toString('base64');
+                const dataURI = `data:${file.mimetype};base64,${b64}`;
 
-        // Upload to Cloudinary
-        const result = await cloudinary.uploader.upload(dataURI, {
-            folder: 'messenger',
-            resource_type: 'auto',
-        });
+                // Upload to Cloudinary
+                const result = await cloudinary.uploader.upload(dataURI, {
+                    folder: 'messenger',
+                    resource_type: 'auto',
+                });
+
+                url = result.secure_url;
+            } catch (cloudinaryError) {
+                console.error('Cloudinary upload failed, using base64 fallback:', cloudinaryError);
+                // Fall back to base64
+                url = `data:${file.mimetype};base64,${Buffer.from(file.buffer).toString('base64')}`;
+            }
+        } else {
+            // Use base64 if Cloudinary not configured
+            console.log('Cloudinary not configured, using base64 encoding');
+            url = `data:${file.mimetype};base64,${Buffer.from(file.buffer).toString('base64')}`;
+        }
 
         // Determine message type
         let type = 'file';
@@ -65,12 +81,12 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
         }
 
         res.json({
-            url: result.secure_url,
+            url: url,
             type: type,
         });
     } catch (error: any) {
         console.error('File upload error:', error);
-        res.status(500).json({ error: 'Upload failed' });
+        res.status(500).json({ error: 'Upload failed: ' + error.message });
     }
 });
 

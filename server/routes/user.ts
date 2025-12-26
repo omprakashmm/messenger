@@ -37,7 +37,16 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => 
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
-        res.json(user);
+        // Return user with consistent 'id' field
+        res.json({
+            id: user._id,
+            _id: user._id,
+            username: user.username,
+            email: user.email,
+            avatar: user.avatar,
+            bio: user.bio,
+            status: user.status,
+        });
     } catch (error: any) {
         console.error('Get user error:', error);
         res.status(500).json({ error: 'Server error' });
@@ -149,7 +158,18 @@ router.patch('/profile', authenticateToken, async (req: AuthRequest, res: Respon
             return res.status(404).json({ error: 'User not found' });
         }
 
-        res.json({ message: 'Profile updated successfully', user });
+        res.json({
+            message: 'Profile updated successfully',
+            user: {
+                id: user._id,
+                _id: user._id,
+                username: user.username,
+                email: user.email,
+                avatar: user.avatar,
+                bio: user.bio,
+                status: user.status,
+            }
+        });
     } catch (error: any) {
         console.error('Update profile error:', error);
         res.status(500).json({ error: 'Server error' });

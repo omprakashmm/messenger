@@ -48,6 +48,13 @@ export default function ProfilePage({ onClose }: { onClose: () => void }) {
             if (response.ok) {
                 const data = await response.json();
                 setAvatar(data.avatarUrl);
+                // Update user in store
+                useAuthStore.setState({
+                    user: {
+                        ...user!,
+                        avatar: data.avatarUrl,
+                    }
+                });
             }
         } catch (error) {
             console.error('Avatar upload error:', error);
@@ -72,14 +79,9 @@ export default function ProfilePage({ onClose }: { onClose: () => void }) {
 
             if (response.ok) {
                 const data = await response.json();
-                // Update user in store
+                // Update user in store with the complete user object from server
                 useAuthStore.setState({
-                    user: {
-                        ...user!,
-                        username,
-                        bio,
-                        avatar,
-                    }
+                    user: data.user
                 });
                 setIsEditing(false);
                 onClose();

@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuthStore, useChatStore } from '@/lib/store';
-import { Send, Smile, Paperclip, MoreVertical, Phone, Video, Info, ArrowLeft } from 'lucide-react';
+import { Send, Smile, Paperclip, MoreVertical, Phone, Video, Info, ArrowLeft, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn, formatMessageTime, getInitials, generateAvatarColor } from '@/lib/utils';
 import EmojiPicker from 'emoji-picker-react';
 import { useNotificationStore } from '@/components/notifications/NotificationContainer';
+import ChatOptionsMenu from './ChatOptionsMenu';
 
 export default function ChatWindow() {
     const { user, socket } = useAuthStore();
@@ -36,16 +37,6 @@ export default function ChatWindow() {
                 if (message.conversationId === currentConversation._id) {
                     addMessage(message);
 
-                    // Debug logging
-                    console.log('Message received:', {
-                        senderID: message.sender._id,
-                        senderId: message.sender.id,
-                        senderUsername: message.sender.username,
-                        userID: user?.id,
-                        user_ID: user?._id,
-                        userUsername: user?.username
-                    });
-
                     // Show notification ONLY if from someone else
                     // Check all possible ID combinations
                     const isFromMe =
@@ -55,17 +46,12 @@ export default function ChatWindow() {
                         (message.sender.id && message.sender.id === user?._id) ||
                         (message.sender.username === user?.username);
 
-                    console.log('Is from me?', isFromMe);
-
                     if (!isFromMe) {
-                        console.log('Showing notification!');
                         addNotification({
                             title: message.sender.username,
                             message: message.content,
                             avatar: message.sender.avatar,
                         });
-                    } else {
-                        console.log('Not showing notification - message from me');
                     }
                 }
             });
@@ -178,18 +164,15 @@ export default function ChatWindow() {
     if (!currentConversation) return null;
 
     // Find the other user - check all possible ID combinations
-    const otherUser = currentConversation.participants.find((p) =>
-        p._id !== user?.id &&
-        p._id !== user?._id &&
-        p.id !== user?.id &&
-        p.username !== user?.username
-    );
-
-    console.log('Chat header - Other user:', otherUser?.username, 'My username:', user?.username);
+    const otherUser = currentConversation.participants.find((p) => {
+        const participantId = p._id || p.id;
+        const currentUserId = user?.id || user?._id;
+        return participantId?.toString() !== currentUserId?.toString();
+    });
 
     const conversationName = currentConversation.type === 'group'
         ? currentConversation.name
-        : otherUser?.username || 'Unknown';
+        : otherUser?.username || 'Unknown User';
     const otherUserAvatar = currentConversation.type === 'group'
         ? currentConversation.avatar
         : otherUser?.avatar;
@@ -234,19 +217,33 @@ export default function ChatWindow() {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                    <button className="p-2 hover:bg-surface-hover rounded-lg transition-colors">
+                <div className="flex items-center gap-1">
+                    <button
+                        className="p-2 hover:bg-surface-hover rounded-lg transition-colors"
+                        title="Voice call"
+                    >
                         <Phone className="w-5 h-5 text-text-secondary" />
                     </button>
-                    <button className="p-2 hover:bg-surface-hover rounded-lg transition-colors">
+                    <button
+                        className="p-2 hover:bg-surface-hover rounded-lg transition-colors"
+                        title="Video call"
+                    >
                         <Video className="w-5 h-5 text-text-secondary" />
                     </button>
-                    <button className="p-2 hover:bg-surface-hover rounded-lg transition-colors">
-                        <Info className="w-5 h-5 text-text-secondary" />
+                    <button
+                        className="p-2 hover:bg-surface-hover rounded-lg transition-colors"
+                        title="Search in conversation"
+                    >
+                        <Search className="w-5 h-5 text-text-secondary" />
                     </button>
-                    <button className="p-2 hover:bg-surface-hover rounded-lg transition-colors">
-                        <MoreVertical className="w-5 h-5 text-text-secondary" />
-                    </button>
+                    <ChatOptionsMenu
+                        onViewInfo={() => console.log('View info')}
+                        onSearch={() => console.log('Search')}
+                        onMute={() => console.log('Mute')}
+                        onArchive={() => console.log('Archive')}
+                        onBlock={() => console.log('Block')}
+                        onDelete={() => console.log('Delete')}
+                    />
                 </div>
             </div>
 
@@ -342,7 +339,29 @@ export default function ChatWindow() {
 
             {/* Input Area */}
             <div className="bg-surface border-t border-border p-4">
-                <form onSubmit={handleSendMessage} className="flex items-end gap-2">
+                <form onSubmit={handleSendMessage} className="flex items-end gap-3">
+                    {/* Attach button - more visible */}
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*,video/*,audio/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                    />
+                    <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading}
+                        className="p-3 bg-surface-hover hover:bg-primary/20 rounded-full transition-all disabled:opacity-50 flex-shrink-0"
+                        title="Attach media or files"
+                    >
+                        {uploading ? (
+                            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                            <Paperclip className="w-6 h-6 text-primary" />
+                        )}
+                    </button>
+
                     <div className="flex-1 relative">
                         <textarea
                             value={messageInput}
@@ -358,40 +377,18 @@ export default function ChatWindow() {
                             }}
                             placeholder="Type a message..."
                             rows={1}
-                            className="w-full bg-background border border-border rounded-lg py-3 px-4 pr-20 text-text-primary placeholder:text-text-muted focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-none max-h-32"
+                            className="w-full bg-background border border-border rounded-2xl py-3 px-4 pr-12 text-text-primary placeholder:text-text-muted focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-none max-h-32"
                         />
-                        <div className="absolute right-2 bottom-2 flex items-center gap-1">
-                            <button
-                                type="button"
-                                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                                className="p-2 hover:bg-surface-hover rounded-lg transition-colors"
-                            >
-                                <Smile className="w-5 h-5 text-text-secondary" />
-                            </button>
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                                onChange={handleFileUpload}
-                                className="hidden"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => fileInputRef.current?.click()}
-                                disabled={uploading}
-                                className="p-2 hover:bg-surface-hover rounded-lg transition-colors disabled:opacity-50"
-                                title="Attach file"
-                            >
-                                {uploading ? (
-                                    <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                                ) : (
-                                    <Paperclip className="w-5 h-5 text-text-secondary" />
-                                )}
-                            </button>
-                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                            className="absolute right-3 bottom-3 p-1 hover:bg-surface-hover rounded-lg transition-colors"
+                        >
+                            <Smile className="w-5 h-5 text-text-secondary hover:text-primary transition-colors" />
+                        </button>
 
                         {showEmojiPicker && (
-                            <div className="absolute bottom-full right-0 mb-2">
+                            <div className="absolute bottom-full right-0 mb-2 z-50">
                                 <EmojiPicker onEmojiClick={handleEmojiClick} theme={'dark' as any} />
                             </div>
                         )}
@@ -400,9 +397,10 @@ export default function ChatWindow() {
                     <button
                         type="submit"
                         disabled={!messageInput.trim()}
-                        className="p-3 bg-gradient-to-r from-primary to-secondary text-white rounded-lg hover:shadow-lg hover:shadow-primary/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-3 bg-gradient-to-r from-primary to-secondary text-white rounded-full hover:shadow-lg hover:shadow-primary/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                        title="Send message"
                     >
-                        <Send className="w-5 h-5" />
+                        <Send className="w-6 h-6" />
                     </button>
                 </form>
             </div>
