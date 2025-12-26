@@ -34,18 +34,36 @@ export default function ChatWindow() {
                 if (message.conversationId === currentConversation._id) {
                     addMessage(message);
 
+                    // Debug logging
+                    console.log('Message received:', {
+                        senderID: message.sender._id,
+                        senderId: message.sender.id,
+                        senderUsername: message.sender.username,
+                        userID: user?.id,
+                        user_ID: user?._id,
+                        userUsername: user?.username
+                    });
+
                     // Show notification ONLY if from someone else
+                    // Check all possible ID combinations
                     const isFromMe =
-                        message.sender._id === user?.id ||
-                        message.sender.id === user?.id ||
-                        message.sender._id === user?._id;
+                        (message.sender._id && message.sender._id === user?.id) ||
+                        (message.sender._id && message.sender._id === user?._id) ||
+                        (message.sender.id && message.sender.id === user?.id) ||
+                        (message.sender.id && message.sender.id === user?._id) ||
+                        (message.sender.username === user?.username);
+
+                    console.log('Is from me?', isFromMe);
 
                     if (!isFromMe) {
+                        console.log('Showing notification!');
                         addNotification({
                             title: message.sender.username,
                             message: message.content,
                             avatar: message.sender.avatar,
                         });
+                    } else {
+                        console.log('Not showing notification - message from me');
                     }
                 }
             });
@@ -185,7 +203,13 @@ export default function ChatWindow() {
             <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-background">
                 <AnimatePresence>
                     {messages.map((message, index) => {
-                        const isSent = message.sender._id === user?.id || message.sender.id === user?.id;
+                        // Check all possible ID combinations
+                        const isSent =
+                            (message.sender._id && message.sender._id === user?.id) ||
+                            (message.sender._id && message.sender._id === user?._id) ||
+                            (message.sender.id && message.sender.id === user?.id) ||
+                            (message.sender.id && message.sender.id === user?._id) ||
+                            (message.sender.username === user?.username);
                         const showAvatar = index === 0 || messages[index - 1].sender._id !== message.sender._id;
 
                         return (
