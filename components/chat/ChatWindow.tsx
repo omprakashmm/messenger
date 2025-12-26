@@ -77,10 +77,31 @@ export default function ChatWindow() {
                 }
             });
 
+            // Listen for message reactions
+            socket.on('message:reaction', ({ messageId, userId, emoji, action }) => {
+                // Update message reactions in the store
+                useChatStore.setState(state => ({
+                    messages: state.messages.map(msg => {
+                        if (msg._id === messageId) {
+                            const reactions = [...(msg.reactions || [])];
+                            if (action === 'add') {
+                                reactions.push({ userId, emoji });
+                            } else {
+                                const index = reactions.findIndex(r => r.userId === userId && r.emoji === emoji);
+                                if (index > -1) reactions.splice(index, 1);
+                            }
+                            return { ...msg, reactions };
+                        }
+                        return msg;
+                    })
+                }));
+            });
+
             return () => {
                 socket.emit('leave:conversation', currentConversation._id);
                 socket.off('message:new');
                 socket.off('typing:user');
+                socket.off('message:reaction');
             };
         }
     }, [socket, currentConversation, user, addMessage]);
@@ -356,6 +377,21 @@ export default function ChatWindow() {
                                         ) : (
                                             <p className="text-sm leading-relaxed">{message.content}</p>
                                         )}
+
+                                        {/* Message Reactions */}
+                                        <MessageReactions
+                                            messageId={message._id}
+                                            reactions={message.reactions || []}
+                                            onReact={(emoji) => {
+                                                if (socket) {
+                                                    socket.emit('message:react', {
+                                                        messageId: message._id,
+                                                        conversationId: currentConversation._id,
+                                                        emoji
+                                                    });
+                                                }
+                                            }}
+                                        />
 
                                         {isSent && (
                                             <MessageStatus
