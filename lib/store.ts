@@ -218,10 +218,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
         set({ currentConversation: conversation, messages: [] });
     },
 
+
     addMessage: (message: Message) => {
-        set((state) => ({
-            messages: [...state.messages, message],
-        }));
+        set((state) => {
+            // Check if message already exists
+            const exists = state.messages.some(m => m._id === message._id);
+            if (exists) {
+                console.log('Message already exists, skipping:', message._id);
+                return state;
+            }
+            console.log('Adding new message:', message._id);
+            return {
+                messages: [...state.messages, message],
+            };
+        });
     },
 
     updateMessage: (messageId: string, updates: Partial<Message>) => {
@@ -329,6 +339,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
     },
 
     setConversations: (conversations: Conversation[]) => {
-        set({ conversations });
+        // Remove duplicates based on _id
+        const uniqueConversations = conversations.filter((conv, index, self) =>
+            index === self.findIndex((c) => c._id === conv._id)
+        );
+        console.log('Setting conversations:', uniqueConversations.length, 'unique out of', conversations.length);
+        set({ conversations: uniqueConversations });
     },
 }));
