@@ -62,17 +62,27 @@ export default function ProfilePage({ onClose }: { onClose: () => void }) {
             const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
             const response = await fetch(`${API_URL}/api/users/profile`, {
-                method: 'PUT',
+                method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
                 },
-                body: JSON.stringify({ username, bio, avatar }),
+                body: JSON.stringify({ username, bio, phone, avatar }),
             });
 
             if (response.ok) {
-                setIsEditing(false);
+                const data = await response.json();
                 // Update user in store
+                useAuthStore.setState({
+                    user: {
+                        ...user!,
+                        username,
+                        bio,
+                        avatar,
+                    }
+                });
+                setIsEditing(false);
+                onClose();
             }
         } catch (error) {
             console.error('Profile update error:', error);

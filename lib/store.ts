@@ -47,6 +47,7 @@ interface AuthState {
     login: (email: string, password: string) => Promise<void>;
     register: (username: string, email: string, password: string) => Promise<void>;
     logout: () => void;
+    restoreSession: () => Promise<void>;
     connectSocket: () => void;
     disconnectSocket: () => void;
 }
@@ -142,6 +143,40 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             socket: null,
             isAuthenticated: false,
         });
+    },
+
+    restoreSession: async () => {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        if (!token) return;
+
+        try {
+            const response = await fetch(`${API_URL}/api/users/me`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (response.ok) {
+                const user = await response.json();
+                set({
+                    user,
+                    token,
+                    isAuthenticated: true,
+                });
+                get().connectSocket();
+            } else {
+                // Token invalid, clear it
+                localStorage.removeItem('token');
+                set({
+                    user: null,
+                    token: null,
+                    isAuthenticated: false,
+                });
+            }
+        } catch (error) {
+            console.error('Session restore error:', error);
+            localStorage.removeItem('token');
+        }
     },
 
     connectSocket: () => {

@@ -8,18 +8,25 @@ import ChatWindow from '@/components/chat/ChatWindow';
 import { motion } from 'framer-motion';
 
 export default function ChatPage() {
-    const { isAuthenticated, user, socket } = useAuthStore();
+    const { isAuthenticated, user, socket, restoreSession } = useAuthStore();
     const { currentConversation } = useChatStore();
     const router = useRouter();
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!isAuthenticated) {
-            router.push('/');
-        } else {
+        // Restore session on mount
+        const initAuth = async () => {
+            await restoreSession();
             setLoading(false);
+        };
+        initAuth();
+    }, [restoreSession]);
+
+    useEffect(() => {
+        if (!loading && !isAuthenticated) {
+            router.push('/');
         }
-    }, [isAuthenticated, router]);
+    }, [isAuthenticated, router, loading]);
 
     if (loading || !isAuthenticated) {
         return (

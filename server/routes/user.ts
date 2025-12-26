@@ -30,6 +30,20 @@ if (process.env.CLOUDINARY_CLOUD_NAME) {
 
 const router = Router();
 
+// Get current user
+router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const user = await User.findById(req.userId).select('-password');
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        res.json(user);
+    } catch (error: any) {
+        console.error('Get user error:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
 // Get all users (search)
 router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
