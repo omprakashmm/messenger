@@ -10,7 +10,7 @@ import { useNotificationStore } from '@/components/notifications/NotificationCon
 
 export default function ChatWindow() {
     const { user, socket } = useAuthStore();
-    const { currentConversation, messages, addMessage, updateMessage, typingUsers, loadMessages, setCurrentConversation } = useChatStore();
+    const { currentConversation, messages, addMessage, typingUsers, loadMessages, setCurrentConversation } = useChatStore();
     const { addNotification } = useNotificationStore();
     const [messageInput, setMessageInput] = useState('');
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -32,24 +32,20 @@ export default function ChatWindow() {
             // Listen for new messages
             socket.on('message:new', (message) => {
                 if (message.conversationId === currentConversation._id) {
-                    // Check if this is replacing an optimistic message
-                    const existingMessage = messages.find(m => m._id === message.tempId || m._id === message._id);
+                    addMessage(message);
 
-                    if (existingMessage) {
-                        // Replace optimistic message with real one
-                        updateMessage(existingMessage._id, message);
-                    } else {
-                        // New message from someone else
-                        addMessage(message);
+                    // Show notification ONLY if from someone else
+                    const isFromMe =
+                        message.sender._id === user?.id ||
+                        message.sender.id === user?.id ||
+                        message.sender._id === user?._id;
 
-                        // Show notification ONLY if from someone else (not me)
-                        if (message.sender._id !== user?.id && message.sender.id !== user?.id) {
-                            addNotification({
-                                title: message.sender.username,
-                                message: message.content,
-                                avatar: message.sender.avatar,
-                            });
-                        }
+                    if (!isFromMe) {
+                        addNotification({
+                            title: message.sender.username,
+                            message: message.content,
+                            avatar: message.sender.avatar,
+                        });
                     }
                 }
             });
@@ -99,32 +95,11 @@ export default function ChatWindow() {
         e.preventDefault();
         if (!messageInput.trim() || !socket || !currentConversation) return;
 
-        const tempId = Date.now().toString();
-        const messageContent = messageInput;
-
-        // Optimistic UI - Add message immediately
-        const optimisticMessage = {
-            _id: tempId,
-            conversationId: currentConversation._id,
-            sender: {
-                _id: user?.id || '',
-                id: user?.id || '',
-                username: user?.username || '',
-                avatar: user?.avatar,
-            },
-            content: messageContent,
-            type: 'text',
-            createdAt: new Date().toISOString(),
-            status: 'sending',
-        };
-        addMessage(optimisticMessage as any);
-
-        // Send to server
+        // Send to server - no optimistic UI
         socket.emit('message:send', {
             conversationId: currentConversation._id,
-            content: messageContent,
+            content: messageInput,
             type: 'text',
-            tempId,
         });
 
         setMessageInput('');
