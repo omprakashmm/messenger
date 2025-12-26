@@ -135,7 +135,16 @@ export default function ChatWindow() {
 
     if (!currentConversation) return null;
 
-    const otherUser = currentConversation.participants.find((p) => p._id !== user?.id);
+    // Find the other user - check all possible ID combinations
+    const otherUser = currentConversation.participants.find((p) =>
+        p._id !== user?.id &&
+        p._id !== user?._id &&
+        p.id !== user?.id &&
+        p.username !== user?.username
+    );
+
+    console.log('Chat header - Other user:', otherUser?.username, 'My username:', user?.username);
+
     const conversationName = currentConversation.type === 'group'
         ? currentConversation.name
         : otherUser?.username || 'Unknown';
