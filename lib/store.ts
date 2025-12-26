@@ -16,6 +16,7 @@ interface Message {
     conversationId: string;
     sender: {
         _id: string;
+        id?: string; // Support both _id and id
         username: string;
         avatar?: string;
     };

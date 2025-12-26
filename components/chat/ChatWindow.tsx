@@ -34,8 +34,8 @@ export default function ChatWindow() {
                 if (message.conversationId === currentConversation._id) {
                     addMessage(message);
 
-                    // Show notification if not from me
-                    if (message.sender._id !== user?.id) {
+                    // Show notification ONLY if from someone else (not me)
+                    if (message.sender._id !== user?.id && message.sender.id !== user?.id) {
                         addNotification({
                             title: message.sender.username,
                             message: message.content,
@@ -91,9 +91,29 @@ export default function ChatWindow() {
         if (!messageInput.trim() || !socket || !currentConversation) return;
 
         const tempId = Date.now().toString();
+        const messageContent = messageInput;
+
+        // Optimistic UI - Add message immediately
+        const optimisticMessage = {
+            _id: tempId,
+            conversationId: currentConversation._id,
+            sender: {
+                _id: user?.id || '',
+                id: user?.id || '',
+                username: user?.username || '',
+                avatar: user?.avatar,
+            },
+            content: messageContent,
+            type: 'text',
+            createdAt: new Date().toISOString(),
+            status: 'sending',
+        };
+        addMessage(optimisticMessage as any);
+
+        // Send to server
         socket.emit('message:send', {
             conversationId: currentConversation._id,
-            content: messageInput,
+            content: messageContent,
             type: 'text',
             tempId,
         });
@@ -181,7 +201,7 @@ export default function ChatWindow() {
             <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-background">
                 <AnimatePresence>
                     {messages.map((message, index) => {
-                        const isSent = message.sender._id === user?.id;
+                        const isSent = message.sender._id === user?.id || message.sender.id === user?.id;
                         const showAvatar = index === 0 || messages[index - 1].sender._id !== message.sender._id;
 
                         return (
