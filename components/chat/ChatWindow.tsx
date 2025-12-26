@@ -102,10 +102,13 @@ export default function ChatWindow() {
 
     if (!currentConversation) return null;
 
-    const otherUser = currentConversation.participants.find((p) => p.id !== user?.id);
+    const otherUser = currentConversation.participants.find((p) => p._id !== user?.id);
     const conversationName = currentConversation.type === 'group'
         ? currentConversation.name
         : otherUser?.username || 'Unknown';
+    const otherUserAvatar = currentConversation.type === 'group'
+        ? currentConversation.avatar
+        : otherUser?.avatar;
 
     return (
         <div className="flex-1 flex flex-col h-full">
@@ -113,16 +116,16 @@ export default function ChatWindow() {
             <div className="h-16 bg-surface border-b border-border px-6 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div className="relative">
-                        {otherUser?.avatar ? (
+                        {otherUserAvatar ? (
                             <img
-                                src={otherUser.avatar}
+                                src={otherUserAvatar}
                                 alt={conversationName}
                                 className="w-10 h-10 rounded-full object-cover"
                             />
                         ) : (
                             <div className={cn(
                                 'w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold',
-                                generateAvatarColor(currentConversation._id)
+                                generateAvatarColor(otherUser?._id || currentConversation._id)
                             )}>
                                 {getInitials(conversationName || '')}
                             </div>

@@ -3,6 +3,7 @@ import { io, Socket } from 'socket.io-client';
 
 interface User {
     id: string;
+    _id?: string; // MongoDB ID
     username: string;
     email: string;
     avatar?: string;
