@@ -22,6 +22,7 @@ interface Message {
     };
     content: string;
     type: 'text' | 'image' | 'video' | 'audio' | 'file';
+    status?: 'sending' | 'sent' | 'delivered' | 'seen';
     reactions: { userId: string; emoji: string }[];
     readBy: { userId: string; readAt: Date }[];
     isEdited: boolean;
