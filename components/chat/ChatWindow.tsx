@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuthStore, useChatStore } from '@/lib/store';
-import { Send, Smile, Paperclip, MoreVertical, Phone, Video, Info } from 'lucide-react';
+import { Send, Smile, Paperclip, MoreVertical, Phone, Video, Info, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn, formatMessageTime, getInitials, generateAvatarColor } from '@/lib/utils';
 import EmojiPicker from 'emoji-picker-react';
@@ -10,7 +10,7 @@ import { useNotificationStore } from '@/components/notifications/NotificationCon
 
 export default function ChatWindow() {
     const { user, socket } = useAuthStore();
-    const { currentConversation, messages, addMessage, typingUsers, loadMessages } = useChatStore();
+    const { currentConversation, messages, addMessage, typingUsers, loadMessages, setCurrentConversation } = useChatStore();
     const { addNotification } = useNotificationStore();
     const [messageInput, setMessageInput] = useState('');
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -124,8 +124,16 @@ export default function ChatWindow() {
     return (
         <div className="flex-1 flex flex-col h-full">
             {/* Chat Header */}
-            <div className="h-16 bg-surface border-b border-border px-6 flex items-center justify-between">
+            <div className="h-16 bg-surface border-b border-border px-4 md:px-6 flex items-center justify-between">
                 <div className="flex items-center gap-3">
+                    {/* Back button for mobile */}
+                    <button
+                        onClick={() => setCurrentConversation(null)}
+                        className="md:hidden p-2 hover:bg-surface-hover rounded-lg transition-colors"
+                    >
+                        <ArrowLeft className="w-5 h-5 text-text-secondary" />
+                    </button>
+
                     <div className="relative">
                         {otherUserAvatar ? (
                             <img

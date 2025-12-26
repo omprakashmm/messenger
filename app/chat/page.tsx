@@ -31,18 +31,22 @@ export default function ChatPage() {
 
     return (
         <div className="h-screen flex overflow-hidden bg-background">
-            {/* Sidebar */}
-            <Sidebar />
+            {/* Sidebar - Hidden on mobile when chat is open */}
+            <div className={`${currentConversation ? 'hidden md:flex' : 'flex'} w-full md:w-auto`}>
+                <Sidebar />
+            </div>
 
-            {/* Chat Window */}
+            {/* Chat Window - Full screen on mobile */}
             {currentConversation ? (
-                <ChatWindow />
+                <div className="flex-1 flex">
+                    <ChatWindow />
+                </div>
             ) : (
-                <div className="flex-1 flex items-center justify-center">
+                <div className="hidden md:flex flex-1 items-center justify-center">
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="text-center"
+                        className="text-center px-4"
                     >
                         <div className="w-32 h-32 mx-auto mb-6 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
                             <svg
