@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuthStore, useChatStore } from '@/lib/store';
 import { Send, Smile, Paperclip, MoreVertical, Phone, Video, Info, ArrowLeft, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -13,17 +13,32 @@ import MessageReactions from './MessageReactions';
 import MessageStatus from './MessageStatus';
 import DragDropUpload from './DragDropUpload';
 import SearchInConversation from './SearchInConversation';
+import DateSeparator from './DateSeparator';
+import { EncryptionBadge } from './EncryptionIndicator';
+import { MessageListSkeleton } from '@/components/ui/Skeletons';
+import { useChatSettings } from './ChatSettings';
+import {
+    createOptimisticMessage,
+    replaceOptimisticMessage,
+    draftStorage,
+    shouldShowDateSeparator,
+    formatDateSeparator,
+    debounce
+} from '@/lib/messageUtils';
+
 
 export default function ChatWindow() {
     const { user, socket } = useAuthStore();
     const { currentConversation, messages, addMessage, typingUsers, loadMessages, setCurrentConversation } = useChatStore();
     const { addNotification } = useNotificationStore();
+    const { sendSound, enterToSend } = useChatSettings();
     const [messageInput, setMessageInput] = useState('');
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [isTyping, setIsTyping] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
     const [typingUsersList, setTypingUsersList] = useState<string[]>([]);
+    const [loading, setLoading] = useState(true);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -31,7 +46,16 @@ export default function ChatWindow() {
     // Load messages when conversation changes
     useEffect(() => {
         if (currentConversation) {
+            setLoading(true);
             loadMessages(currentConversation._id);
+
+            // Restore draft
+            const draft = draftStorage.get(currentConversation._id);
+            if (draft) {
+                setMessageInput(draft);
+            }
+
+            setTimeout(() => setLoading(false), 500);
         }
     }, [currentConversation?._id]);
 
@@ -120,6 +144,11 @@ export default function ChatWindow() {
             socket.emit('typing:start', currentConversation._id);
         }
 
+        // Save draft
+        if (currentConversation) {
+            draftStorage.save(currentConversation._id, messageInput);
+        }
+
         if (typingTimeoutRef.current) {
             clearTimeout(typingTimeoutRef.current);
         }
@@ -134,13 +163,35 @@ export default function ChatWindow() {
 
     const handleSendMessage = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!messageInput.trim() || !socket || !currentConversation) return;
+        if (!messageInput.trim() || !socket || !currentConversation || !user) return;
 
-        // Send to server - no optimistic UI
+        // Create optimistic message
+        const optimisticMessage = createOptimisticMessage(
+            messageInput,
+            currentConversation._id,
+            user,
+            'text'
+        );
+
+        // Add optimistically
+        addMessage(optimisticMessage);
+
+        // Clear draft
+        draftStorage.clear(currentConversation._id);
+
+        // Play send sound if enabled
+        if (sendSound && typeof window !== 'undefined') {
+            const audio = new Audio('/sounds/send.mp3');
+            audio.volume = 0.3;
+            audio.play().catch(() => { }); // Ignore errors
+        }
+
+        // Send to server
         socket.emit('message:send', {
             conversationId: currentConversation._id,
             content: messageInput,
             type: 'text',
+            optimisticId: optimisticMessage._id,
         });
 
         setMessageInput('');
@@ -260,6 +311,7 @@ export default function ChatWindow() {
                                 {otherUser?.status === 'online' ? 'Online' : 'Offline'}
                             </p>
                         </div>
+                        <EncryptionBadge />
                     </div>
 
                     <div className="flex items-center gap-1">
@@ -307,113 +359,124 @@ export default function ChatWindow() {
 
                 {/* Messages Area */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-background">
-                    <AnimatePresence>
-                        {messages.map((message, index) => {
-                            // Check all possible ID combinations
-                            const isSent =
-                                (message.sender._id && message.sender._id === user?.id) ||
-                                (message.sender._id && message.sender._id === user?._id) ||
-                                (message.sender.id && message.sender.id === user?.id) ||
-                                (message.sender.id && message.sender.id === user?._id) ||
-                                (message.sender.username === user?.username);
-                            const showAvatar = index === 0 || messages[index - 1].sender._id !== message.sender._id;
+                    {loading ? (
+                        <MessageListSkeleton />
+                    ) : (
+                        <AnimatePresence>
+                            {messages.map((message, index) => {
+                                // Check all possible ID combinations
+                                const isSent =
+                                    (message.sender._id && message.sender._id === user?.id) ||
+                                    (message.sender._id && message.sender._id === user?._id) ||
+                                    (message.sender.id && message.sender.id === user?.id) ||
+                                    (message.sender.id && message.sender.id === user?._id) ||
+                                    (message.sender.username === user?.username);
+                                const showAvatar = index === 0 || messages[index - 1].sender._id !== message.sender._id;
+                                const previousMessage = index > 0 ? messages[index - 1] : null;
 
-                            return (
-                                <motion.div
-                                    key={message._id}
-                                    id={`message-${message._id}`}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -10 }}
-                                    className={cn('flex gap-2', isSent ? 'justify-end' : 'justify-start')}
-                                >
-                                    {!isSent && showAvatar && (
-                                        <div className={cn(
-                                            'w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0',
-                                            generateAvatarColor(message.sender._id)
-                                        )}>
-                                            {getInitials(message.sender.username)}
-                                        </div>
-                                    )}
-                                    {!isSent && !showAvatar && <div className="w-8" />}
-
-                                    <div className={cn('message-bubble group', isSent ? 'sent' : 'received')}>
-                                        {!isSent && showAvatar && (
-                                            <p className="text-xs font-semibold mb-1 text-primary">
-                                                {message.sender.username}
-                                            </p>
+                                return (
+                                    <React.Fragment key={message._id}>
+                                        {/* Date Separator */}
+                                        {shouldShowDateSeparator(message, previousMessage) && (
+                                            <DateSeparator date={formatDateSeparator(message.createdAt)} />
                                         )}
 
-                                        {/* Render based on message type */}
-                                        {message.type === 'image' ? (
-                                            <img
-                                                src={message.content}
-                                                alt="Shared image"
-                                                className="max-w-sm rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                                                onClick={() => window.open(message.content, '_blank')}
-                                            />
-                                        ) : message.type === 'video' ? (
-                                            <video
-                                                src={message.content}
-                                                controls
-                                                className="max-w-sm rounded-lg"
-                                            />
-                                        ) : message.type === 'audio' ? (
-                                            <audio
-                                                src={message.content}
-                                                controls
-                                                className="max-w-sm"
-                                            />
-                                        ) : message.type === 'file' ? (
-                                            <a
-                                                href={message.content}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="flex items-center gap-2 text-primary hover:underline"
-                                            >
-                                                <Paperclip className="w-4 h-4" />
-                                                <span>Download File</span>
-                                            </a>
-                                        ) : (
-                                            <p className="text-sm leading-relaxed">{message.content}</p>
-                                        )}
+                                        <motion.div
+                                            id={`message-${message._id}`}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -10 }}
+                                            className={cn('flex gap-2', isSent ? 'justify-end' : 'justify-start')}
+                                        >
+                                            {!isSent && showAvatar && (
+                                                <div className={cn(
+                                                    'w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0',
+                                                    generateAvatarColor(message.sender._id)
+                                                )}>
+                                                    {getInitials(message.sender.username)}
+                                                </div>
+                                            )}
+                                            {!isSent && !showAvatar && <div className="w-8" />}
 
-                                        {/* Message Reactions */}
-                                        <MessageReactions
-                                            messageId={message._id}
-                                            reactions={message.reactions || []}
-                                            onReact={(emoji) => {
-                                                if (socket) {
-                                                    socket.emit('message:react', {
-                                                        messageId: message._id,
-                                                        conversationId: currentConversation._id,
-                                                        emoji
-                                                    });
-                                                }
-                                            }}
-                                        />
+                                            <div className={cn('message-bubble group', isSent ? 'sent' : 'received')}>
+                                                {!isSent && showAvatar && (
+                                                    <p className="text-xs font-semibold mb-1 text-primary">
+                                                        {message.sender.username}
+                                                    </p>
+                                                )}
 
-                                        {isSent && (
-                                            <MessageStatus
-                                                status={message.status || 'sent'}
-                                                timestamp={message.createdAt}
-                                            />
-                                        )}
-                                        {!isSent && (
-                                            <span className="text-xs opacity-70 mt-1 block">
-                                                {formatMessageTime(message.createdAt)}
-                                            </span>
-                                        )}
-                                    </div>
-                                </motion.div>
-                            );
-                        })}
+                                                {/* Render based on message type */}
+                                                {message.type === 'image' ? (
+                                                    <img
+                                                        src={message.content}
+                                                        alt="Shared image"
+                                                        className="max-w-sm rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                                                        onClick={() => window.open(message.content, '_blank')}
+                                                    />
+                                                ) : message.type === 'video' ? (
+                                                    <video
+                                                        src={message.content}
+                                                        controls
+                                                        className="max-w-sm rounded-lg"
+                                                    />
+                                                ) : message.type === 'audio' ? (
+                                                    <audio
+                                                        src={message.content}
+                                                        controls
+                                                        className="max-w-sm"
+                                                    />
+                                                ) : message.type === 'file' ? (
+                                                    <a
+                                                        href={message.content}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="flex items-center gap-2 text-primary hover:underline"
+                                                    >
+                                                        <Paperclip className="w-4 h-4" />
+                                                        <span>Download File</span>
+                                                    </a>
+                                                ) : (
+                                                    <p className="text-sm leading-relaxed">{message.content}</p>
+                                                )}
 
-                        {/* Typing Indicator */}
-                        {typingUsersList.length > 0 && (
-                            <TypingIndicator username={typingUsersList[0]} />
-                        )}
-                    </AnimatePresence>
+                                                {/* Message Reactions */}
+                                                <MessageReactions
+                                                    messageId={message._id}
+                                                    reactions={message.reactions || []}
+                                                    onReact={(emoji) => {
+                                                        if (socket) {
+                                                            socket.emit('message:react', {
+                                                                messageId: message._id,
+                                                                conversationId: currentConversation._id,
+                                                                emoji
+                                                            });
+                                                        }
+                                                    }}
+                                                />
+
+                                                {isSent && (
+                                                    <MessageStatus
+                                                        status={message.status || 'sent'}
+                                                        timestamp={message.createdAt}
+                                                    />
+                                                )}
+                                                {!isSent && (
+                                                    <span className="text-xs opacity-70 mt-1 block">
+                                                        {formatMessageTime(message.createdAt)}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    </React.Fragment>
+                                );
+                            })}
+
+                            {/* Typing Indicator */}
+                            {typingUsersList.length > 0 && (
+                                <TypingIndicator username={typingUsersList[0]} />
+                            )}
+                        </AnimatePresence>
+                    )}
                     <div ref={messagesEndRef} />
                 </div>
 
