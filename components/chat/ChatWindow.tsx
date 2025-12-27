@@ -337,7 +337,7 @@ export default function ChatWindow() {
                                     )}
                                     {!isSent && !showAvatar && <div className="w-8" />}
 
-                                    <div className={cn('message-bubble', isSent ? 'sent' : 'received')}>
+                                    <div className={cn('message-bubble group', isSent ? 'sent' : 'received')}>
                                         {!isSent && showAvatar && (
                                             <p className="text-xs font-semibold mb-1 text-primary">
                                                 {message.sender.username}
