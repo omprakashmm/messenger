@@ -204,7 +204,7 @@ export function logPerformanceMetrics() {
         console.log('TCP Connection:', `${(navigation.connectEnd - navigation.connectStart).toFixed(2)}ms`);
         console.log('Request Time:', `${(navigation.responseStart - navigation.requestStart).toFixed(2)}ms`);
         console.log('Response Time:', `${(navigation.responseEnd - navigation.responseStart).toFixed(2)}ms`);
-        console.log('DOM Processing:', `${(navigation.domComplete - navigation.domLoading).toFixed(2)}ms`);
+        console.log('DOM Processing:', `${(navigation.domComplete - navigation.domInteractive).toFixed(2)}ms`);
         console.log('Load Complete:', `${(navigation.loadEventEnd - navigation.loadEventStart).toFixed(2)}ms`);
         console.log('Total Time:', `${(navigation.loadEventEnd - navigation.fetchStart).toFixed(2)}ms`);
 

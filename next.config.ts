@@ -43,56 +43,8 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // Webpack optimizations
-  webpack: (config, { dev, isServer }) => {
-    // Production optimizations
-    if (!dev && !isServer) {
-      config.optimization = {
-        ...config.optimization,
-        moduleIds: 'deterministic',
-        runtimeChunk: 'single',
-        splitChunks: {
-          chunks: 'all',
-          cacheGroups: {
-            default: false,
-            vendors: false,
-            // Vendor chunk
-            vendor: {
-              name: 'vendor',
-              chunks: 'all',
-              test: /node_modules/,
-              priority: 20,
-            },
-            // Common chunk
-            common: {
-              name: 'common',
-              minChunks: 2,
-              chunks: 'all',
-              priority: 10,
-              reuseExistingChunk: true,
-              enforce: true,
-            },
-            // React/Next.js framework chunk
-            framework: {
-              name: 'framework',
-              test: /[\\/]node_modules[\\/](react|react-dom|next)[\\/]/,
-              priority: 40,
-              reuseExistingChunk: true,
-            },
-            // UI libraries chunk
-            ui: {
-              name: 'ui',
-              test: /[\\/]node_modules[\\/](@radix-ui|framer-motion|lucide-react)[\\/]/,
-              priority: 30,
-              reuseExistingChunk: true,
-            },
-          },
-        },
-      };
-    }
-
-    return config;
-  },
+  // Empty turbopack config to silence the warning
+  turbopack: {},
 
   // Headers for caching and security
   async headers() {
