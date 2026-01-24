@@ -53,8 +53,8 @@ export function FeatureFlagsPanel() {
                     <button
                         onClick={() => setActiveTab('features')}
                         className={`px-6 py-3 font-medium transition-colors ${activeTab === 'features'
-                                ? 'border-b-2 border-primary text-primary'
-                                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                            ? 'border-b-2 border-primary text-primary'
+                            : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                             }`}
                     >
                         Features
@@ -62,8 +62,8 @@ export function FeatureFlagsPanel() {
                     <button
                         onClick={() => setActiveTab('performance')}
                         className={`px-6 py-3 font-medium transition-colors ${activeTab === 'performance'
-                                ? 'border-b-2 border-primary text-primary'
-                                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                            ? 'border-b-2 border-primary text-primary'
+                            : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                             }`}
                     >
                         Performance
@@ -71,8 +71,8 @@ export function FeatureFlagsPanel() {
                     <button
                         onClick={() => setActiveTab('security')}
                         className={`px-6 py-3 font-medium transition-colors ${activeTab === 'security'
-                                ? 'border-b-2 border-primary text-primary'
-                                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                            ? 'border-b-2 border-primary text-primary'
+                            : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                             }`}
                     >
                         Security
@@ -97,10 +97,10 @@ export function FeatureFlagsPanel() {
                                 <div className="w-32 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                                     <div
                                         className={`h-full transition-all ${performanceScore >= 80
-                                                ? 'bg-green-500'
-                                                : performanceScore >= 60
-                                                    ? 'bg-yellow-500'
-                                                    : 'bg-red-500'
+                                            ? 'bg-green-500'
+                                            : performanceScore >= 60
+                                                ? 'bg-yellow-500'
+                                                : 'bg-red-500'
                                             }`}
                                         style={{ width: `${performanceScore}%` }}
                                     />
@@ -197,7 +197,10 @@ function PerformanceTab() {
                         >
                             <div className="text-sm text-gray-600 dark:text-gray-400">{metric}</div>
                             <div className="text-2xl font-bold mt-1">
-                                {metrics[metric as keyof typeof metrics]?.toFixed(0) || '-'}
+                                {(() => {
+                                    const value = metrics[metric as keyof typeof metrics];
+                                    return typeof value === 'number' ? value.toFixed(0) : '-';
+                                })()}
                                 <span className="text-sm text-gray-500 ml-1">ms</span>
                             </div>
                         </div>
@@ -219,10 +222,10 @@ function PerformanceTab() {
                         <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                             <div
                                 className={`h-full transition-all ${(metrics.memoryPercentage || 0) > 80
-                                        ? 'bg-red-500'
-                                        : (metrics.memoryPercentage || 0) > 60
-                                            ? 'bg-yellow-500'
-                                            : 'bg-green-500'
+                                    ? 'bg-red-500'
+                                    : (metrics.memoryPercentage || 0) > 60
+                                        ? 'bg-yellow-500'
+                                        : 'bg-green-500'
                                     }`}
                                 style={{ width: `${metrics.memoryPercentage || 0}%` }}
                             />
@@ -240,8 +243,8 @@ function PerformanceTab() {
                             <div
                                 key={alert.id}
                                 className={`p-3 rounded-lg ${alert.type === 'error'
-                                        ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
-                                        : 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800'
+                                    ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+                                    : 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800'
                                     }`}
                             >
                                 <div className="flex items-start justify-between">
@@ -304,10 +307,10 @@ function SecurityTab() {
                         <div
                             key={event.id}
                             className={`p-3 rounded-lg border ${event.severity === 'critical'
-                                    ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-                                    : event.severity === 'warning'
-                                        ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
-                                        : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                                ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                                : event.severity === 'warning'
+                                    ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+                                    : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
                                 }`}
                         >
                             <div className="flex items-start justify-between">

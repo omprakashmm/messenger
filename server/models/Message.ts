@@ -37,6 +37,9 @@ export interface IMessage extends Document {
     isDeleted: boolean;
     deletedAt?: Date;
     deletedFor?: mongoose.Types.ObjectId[]; // Users who deleted this message
+    isPinned: boolean;
+    pinnedAt?: Date;
+    pinnedBy?: mongoose.Types.ObjectId;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -131,6 +134,15 @@ const messageSchema = new Schema<IMessage>(
             type: Schema.Types.ObjectId,
             ref: 'User',
         }],
+        isPinned: {
+            type: Boolean,
+            default: false,
+        },
+        pinnedAt: Date,
+        pinnedBy: {
+            type: Schema.Types.ObjectId,
+            ref: 'User',
+        },
     },
     {
         timestamps: true,
