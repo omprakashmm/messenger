@@ -66,23 +66,34 @@ export default function ChatWindow() {
             // Listen for new messages
             socket.on('message:new', (message) => {
                 if (message.conversationId === currentConversation._id) {
-                    addMessage(message);
+                    // Check if this is replacing an optimistic message
+                    if (message.tempId) {
+                        // Replace optimistic message with real one
+                        useChatStore.setState(state => ({
+                            messages: state.messages.map(msg =>
+                                msg._id === message.tempId ? message : msg
+                            )
+                        }));
+                    } else {
+                        // Check if from me (don't add if I sent it - already added optimistically)
+                        const isFromMe =
+                            (message.sender._id && message.sender._id === user?.id) ||
+                            (message.sender._id && message.sender._id === user?._id) ||
+                            (message.sender.id && message.sender.id === user?.id) ||
+                            (message.sender.id && message.sender.id === user?._id) ||
+                            (message.sender.username === user?.username);
 
-                    // Show notification ONLY if from someone else
-                    // Check all possible ID combinations
-                    const isFromMe =
-                        (message.sender._id && message.sender._id === user?.id) ||
-                        (message.sender._id && message.sender._id === user?._id) ||
-                        (message.sender.id && message.sender.id === user?.id) ||
-                        (message.sender.id && message.sender.id === user?._id) ||
-                        (message.sender.username === user?.username);
+                        // Only add if it's from someone else
+                        if (!isFromMe) {
+                            addMessage(message);
 
-                    if (!isFromMe) {
-                        addNotification({
-                            title: message.sender.username,
-                            message: message.content,
-                            avatar: message.sender.avatar,
-                        });
+                            // Show notification
+                            addNotification({
+                                title: message.sender.username,
+                                message: message.content,
+                                avatar: message.sender.avatar,
+                            });
+                        }
                     }
                 }
             });
@@ -128,7 +139,7 @@ export default function ChatWindow() {
                 socket.off('message:reaction');
             };
         }
-    }, [socket, currentConversation, user, addMessage]);
+    }, [socket, currentConversation, user, addMessage, addNotification]);
 
     useEffect(() => {
         scrollToBottom();

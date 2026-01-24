@@ -32,7 +32,7 @@ export const handleSocketConnection = (io: Server, socket: Socket) => {
     // Handle sending messages
     socket.on('message:send', async (data) => {
         try {
-            const { conversationId, content, type = 'text', replyTo, fileUrl, fileName, fileSize } = data;
+            const { conversationId, content, type = 'text', replyTo, fileUrl, fileName, fileSize, optimisticId } = data;
 
             // Create message
             const message = new Message({
@@ -61,15 +61,15 @@ export const handleSocketConnection = (io: Server, socket: Socket) => {
                 lastMessageAt: new Date(),
             });
 
-            // Emit to conversation room
+            // Emit to conversation room with tempId for optimistic UI replacement
             const messageWithTempId = {
                 ...message.toObject(),
-                tempId: data.tempId,
+                tempId: optimisticId, // Use optimisticId from frontend
             };
             io.to(`conversation:${conversationId}`).emit('message:new', messageWithTempId);
 
             // Send delivery confirmation to sender
-            socket.emit('message:sent', { tempId: data.tempId, message });
+            socket.emit('message:sent', { optimisticId, message });
 
             // Auto-mark as delivered for online users in conversation
             setTimeout(async () => {
